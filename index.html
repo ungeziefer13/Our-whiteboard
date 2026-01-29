@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Free online whiteboard with time-travel replay and real-time collaboration. No installation required.">
+    <meta name="keywords" content="online whiteboard, web whiteboard, drawing tool, collaboration, timelapse">
+    <title>TimeWhiteboard - Free Online Collaboration Tool</title>
+    
+    <style>
+        @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+        
+        body { 
+            margin: 0; 
+            padding: 0; 
+            font-family: 'Pretendard', sans-serif; 
+            background-color: #f4f6f8; 
+            display: flex; 
+            flex-direction: column; 
+            height: 100vh; 
+        }
+
+        /* [광고 영역] 상단 배너 */
+        header {
+            background: white;
+            padding: 0 20px;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 60px;
+            flex-shrink: 0;
+        }
+        .header-left { display: flex; align-items: center; gap: 20px; }
+        .logo { font-weight: 800; font-size: 20px; color: #3b82f6; }
+        
+        .ad-slot-top {
+            width: 468px; height: 50px; 
+            background: #eee; 
+            color: #999; 
+            display: flex; align-items: center; justify-content: center; font-size: 12px;
+            border-radius: 4px;
+        }
+
+        /* 언어 선택기 */
+        select#langSelector {
+            padding: 5px 10px;
+            border-radius: 6px;
+            border: 1px solid #ddd;
+            font-size: 14px;
+            cursor: pointer;
+            background-color: #f9f9f9;
+        }
+
+        /* 메인 컨테이너 */
+        #main-container {
+            flex-grow: 1;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+        }
+
+        /* 캔버스 영역 */
+        #canvas-wrapper {
+            flex-grow: 1;
+            position: relative;
+            background: #fff;
+            cursor: crosshair;
+            overflow: hidden;
+        }
+
+        /* [SEO & 광고 영역] 우측 사이드바 */
+        aside {
+            width: 320px;
+            background: #f9fafb;
+            border-left: 1px solid #ddd;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            flex-shrink: 0;
+        }
+        
+        @media (max-width: 900px) {
+            .ad-slot-top { display: none; }
+            aside { display: none; }
+        }
+
+        h2 { font-size: 16px; margin-bottom: 10px; color: #333; }
+        p, li { font-size: 14px; color: #666; line-height: 1.6; }
+        .ad-slot-sidebar {
+            width: 100%; height: 250px;
+            background: #eee;
+            display: flex; align-items: center; justify-content: center;
+            color: #999; font-size: 12px;
+            border-radius: 8px;
+        }
+
+        /* 툴바 */
+        #toolbar {
+            position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
+            background: white; padding: 8px 16px; border-radius: 50px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1); display: flex; gap: 15px; align-items: center; z-index: 10;
+        }
+        
+        /* 타임머신 바 */
+        #timeMachine {
+            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+            width: 90%; max-width: 600px; background: rgba(255, 255, 255, 0.95);
+            padding: 10px 20px; border-radius: 12px; box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+            display: flex; flex-direction: column; gap: 5px; z-index: 10;
+        }
+
+        input[type="color"] { border: none; background: none; width: 24px; height: 24px; cursor: pointer; padding: 0;}
+        button { background: #fff; border: 1px solid #ddd; padding: 6px 12px; border-radius: 20px; cursor: pointer; font-size: 13px; font-family: inherit;}
+        button:hover { background: #f0f0f0; }
+        button.active { background: #3b82f6; color: white; border-color: #3b82f6; }
+        
+        .footer-link { margin-top: auto; font-size: 12px; color: #999; text-align: center; }
+        .footer-link a { color: #666; text-decoration: none; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="header-left">
+            <div class="logo">TimeWhiteboard</div>
+            <select id="langSelector">
+                <option value="en">🇺🇸 English</option>
+                <option value="ko">🇰🇷 한국어</option>
+                <option value="ja">🇯🇵 日本語</option>
+            </select>
+        </div>
+        <div class="ad-slot-top" data-i18n="ad_top">Ad Space (Top Banner)</div>
+    </header>
+
+    <div id="main-container">
+        <div id="canvas-wrapper">
+            <div id="toolbar">
+                <input type="color" id="colorPicker" value="#1a1a1a">
+                <input type="range" id="lineWidth" min="2" max="50" value="4">
+                <button id="penBtn" class="active" data-i18n="pen">Pen</button>
+                <button id="eraserBtn" data-i18n="eraser">Eraser</button>
+                <button id="clearBtn" data-i18n="clear">Clear</button>
+            </div>
+
+            <canvas id="whiteboard"></canvas>
+
+            <div id="timeMachine">
+                <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                    <button id="playBtn" data-i18n="play">▶ Play</button>
+                    <span id="statusText" style="font-size:12px; color:#666;">History: 0 / 0</span>
+                </div>
+                <input type="range" id="historySlider" min="0" max="0" value="0" style="width:100%;">
+            </div>
+        </div>
+
+        <aside>
+            <div class="ad-slot-sidebar" data-i18n="ad_side">Ad Space (Sidebar)</div>
+            
+            <article>
+                <h2 data-i18n="guide_title">User Guide</h2>
+                <p data-i18n="guide_desc">Draw and share ideas instantly without installation. Use the 'Time Machine' feature to replay your creative process.</p>
+            </article>
+
+            <article>
+                <h2 data-i18n="features_title">Key Features</h2>
+                <ul>
+                    <li data-i18n="feature_1"><strong>Real-time Sync:</strong> Open a new tab to see drawings share instantly.</li>
+                    <li data-i18n="feature_2"><strong>Time Travel:</strong> Press the play button to rewind your drawing process.</li>
+                    <li data-i18n="feature_3"><strong>Auto Save:</strong> Your work is preserved even after refreshing.</li>
+                </ul>
+            </article>
+
+            <div class="footer-link">
+                <a href="#" data-i18n="terms">Terms</a> | <a href="#" data-i18n="privacy">Privacy</a>
+                <br>© 2026 TimeWhiteboard
+            </div>
+        </aside>
+    </div>
+
+    <script>
+        // --- 다국어 설정 (i18n) ---
+        const translations = {
+            en: {
+                ad_top: "Ad Space (Top Banner)",
+                pen: "Pen",
+                eraser: "Eraser",
+                clear: "Clear",
+                play: "▶ Play",
+                stop: "⏹ Stop",
+                replaying: "Replaying...",
+                history: "History",
+                ad_side: "Ad Space (Sidebar)",
+                guide_title: "User Guide",
+                guide_desc: "Draw and share ideas instantly without installation. Use the 'Time Machine' feature to replay your creative process.",
+                features_title: "Key Features",
+                feature_1: "<strong>Real-time Sync:</strong> Open a new tab to see drawings share instantly.",
+                feature_2: "<strong>Time Travel:</strong> Press the play button to rewind your drawing process.",
+                feature_3: "<strong>Auto Save:</strong> Your work is preserved even after refreshing.",
+                terms: "Terms",
+                privacy: "Privacy Policy"
+            },
+            ko: {
+                ad_top: "상단 배너 광고 영역",
+                pen: "펜",
+                eraser: "지우개",
+                clear: "초기화",
+                play: "▶ 재생",
+                stop: "⏹ 정지",
+                replaying: "재생 중...",
+                history: "히스토리",
+                ad_side: "사이드바 광고 영역",
+                guide_title: "이용 안내",
+                guide_desc: "별도의 설치 없이 브라우저에서 바로 그림을 그리고 아이디어를 공유하세요. '타임머신' 기능을 통해 아이디어가 발전하는 과정을 다시 볼 수 있습니다.",
+                features_title: "주요 기능",
+                feature_1: "<strong>실시간 협업:</strong> 같은 브라우저의 새 탭을 열면 그림이 실시간으로 공유됩니다.",
+                feature_2: "<strong>타임머신 재생:</strong> 하단의 재생 버튼을 눌러 그리는 과정을 되감아 보세요.",
+                feature_3: "<strong>자동 저장:</strong> 페이지를 새로고침해도 그림이 유지됩니다.",
+                terms: "이용약관",
+                privacy: "개인정보처리방침"
+            },
+            ja: {
+                ad_top: "広告スペース (上部)",
+                pen: "ペン",
+                eraser: "消しゴム",
+                clear: "クリア",
+                play: "▶ 再生",
+                stop: "⏹ 停止",
+                replaying: "再生中...",
+                history: "履歴",
+                ad_side: "広告スペース (サイドバー)",
+                guide_title: "利用ガイド",
+                guide_desc: "インストール不要で、すぐにアイデアを描いて共有できます。「タイムマシン」機能を使って、描画プロセスを再生できます。",
+                features_title: "主な機能",
+                feature_1: "<strong>リアルタイム同期:</strong> 新しいタブを開くと、絵がリアルタイムで共有されます。",
+                feature_2: "<strong>タイムマシン:</strong> 下部の再生ボタンを押すと、描画の過程を巻き戻せます。",
+                feature_3: "<strong>自動保存:</strong> ページを更新しても、作業内容は保持されます。",
+                terms: "利用規約",
+                privacy: "プライバシーポリシー"
+            }
+        };
+
+        let currentLang = 'en'; // 기본 언어 영어
+
+        function updateLanguage(lang) {
+            currentLang = lang;
+            const elements = document.querySelectorAll('[data-i18n]');
+            elements.forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (translations[lang][key]) {
+                    el.innerHTML = translations[lang][key];
+                }
+            });
+            // 재생 버튼 상태 업데이트 (재생 중인지 정지 상태인지에 따라 텍스트 변경)
+            if (isReplaying) {
+                playBtn.innerHTML = translations[lang]['stop'];
+            } else {
+                playBtn.innerHTML = translations[lang]['play'];
+            }
+            updateSliderUI(); // 상태 텍스트(History...) 업데이트
+        }
+
+        document.getElementById('langSelector').addEventListener('change', (e) => {
+            updateLanguage(e.target.value);
+        });
+
+        // --- 기존 기능 스크립트 ---
+        const canvas = document.getElementById('whiteboard');
+        const ctx = canvas.getContext('2d');
+        const wrapper = document.getElementById('canvas-wrapper');
+
+        const colorPicker = document.getElementById('colorPicker');
+        const lineWidthRange = document.getElementById('lineWidth');
+        const penBtn = document.getElementById('penBtn');
+        const eraserBtn = document.getElementById('eraserBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const historySlider = document.getElementById('historySlider');
+        const playBtn = document.getElementById('playBtn');
+        const statusText = document.getElementById('statusText');
+
+        let isDrawing = false;
+        let lastX = 0, lastY = 0;
+        let isEraserMode = false;
+        let drawHistory = [];
+        let isReplaying = false;
+
+        const STORAGE_KEY = 'wb_sync_final_v5_lang';
+        const RESET_KEY = 'wb_reset_final_v5_lang';
+
+        function resizeCanvas() {
+            canvas.width = wrapper.offsetWidth;
+            canvas.height = wrapper.offsetHeight;
+            redrawCanvas(historySlider.value);
+        }
+        window.addEventListener('resize', resizeCanvas);
+        setTimeout(resizeCanvas, 10);
+
+        function drawLine(start, end, color, width, isEraser) {
+            ctx.beginPath();
+            ctx.moveTo(start.x, start.y);
+            ctx.lineTo(end.x, end.y);
+            if (isEraser) {
+                ctx.globalCompositeOperation = 'destination-out';
+                ctx.strokeStyle = 'rgba(0,0,0,1)';
+            } else {
+                ctx.globalCompositeOperation = 'source-over';
+                ctx.strokeStyle = color;
+            }
+            ctx.lineWidth = width;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.stroke();
+            ctx.globalCompositeOperation = 'source-over';
+        }
+
+        function getPos(e) {
+            const rect = canvas.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            return { x: clientX - rect.left, y: clientY - rect.top };
+        }
+
+        function startDrawing(e) {
+            if (isReplaying) return;
+            isDrawing = true;
+            const pos = getPos(e);
+            lastX = pos.x; lastY = pos.y;
+            ctx.beginPath(); ctx.moveTo(lastX, lastY);
+        }
+
+        function drawProcess(e) {
+            if (!isDrawing || isReplaying) return;
+            if(e.target === canvas) e.preventDefault();
+            const pos = getPos(e);
+            
+            const stroke = {
+                start: {x: lastX, y: lastY},
+                end: {x: pos.x, y: pos.y},
+                color: colorPicker.value,
+                width: lineWidthRange.value,
+                isEraser: isEraserMode
+            };
+
+            drawHistory.push(stroke);
+            updateSliderUI();
+            drawLine(stroke.start, stroke.end, stroke.color, stroke.width, stroke.isEraser);
+            
+            localStorage.setItem(STORAGE_KEY, JSON.stringify({
+                ...stroke,
+                timestamp: Date.now(),
+                id: Math.random().toString(36).substr(2, 9)
+            }));
+            
+            lastX = pos.x; lastY = pos.y;
+        }
+
+        function stopDrawing() { isDrawing = false; }
+
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('touchstart', startDrawing, {passive: false});
+        window.addEventListener('mousemove', drawProcess);
+        window.addEventListener('touchmove', drawProcess, {passive: false});
+        window.addEventListener('mouseup', stopDrawing);
+        window.addEventListener('touchend', stopDrawing);
+        wrapper.addEventListener('mouseleave', stopDrawing);
+
+        function updateSliderUI() {
+            historySlider.max = drawHistory.length;
+            if (!isReplaying) historySlider.value = drawHistory.length;
+            
+            // 다국어 처리된 상태 텍스트
+            const historyLabel = translations[currentLang]['history'];
+            const replayingLabel = translations[currentLang]['replaying'];
+            
+            if(isReplaying) {
+                statusText.innerText = `${replayingLabel} ${historySlider.value} / ${drawHistory.length}`;
+            } else {
+                statusText.innerText = `${historyLabel}: ${historySlider.value} / ${drawHistory.length}`;
+            }
+        }
+
+        function redrawCanvas(upto) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for(let i=0; i<upto; i++) {
+                const s = drawHistory[i];
+                drawLine(s.start, s.end, s.color, s.width, s.isEraser);
+            }
+        }
+
+        penBtn.onclick = () => { isEraserMode = false; penBtn.classList.add('active'); eraserBtn.classList.remove('active'); canvas.style.cursor = 'crosshair'; };
+        eraserBtn.onclick = () => { isEraserMode = true; eraserBtn.classList.add('active'); penBtn.classList.remove('active'); canvas.style.cursor = 'default'; };
+        
+        clearBtn.onclick = () => { 
+            drawHistory = []; 
+            redrawCanvas(0); 
+            updateSliderUI(); 
+            localStorage.setItem(RESET_KEY, Date.now());
+        };
+
+        historySlider.oninput = (e) => {
+            isReplaying = true;
+            const val = parseInt(e.target.value);
+            redrawCanvas(val);
+            updateSliderUI(); // 텍스트 업데이트
+            if(val === drawHistory.length) isReplaying = false;
+        };
+
+        playBtn.onclick = () => {
+            if(isReplaying) {
+                isReplaying = false; 
+                playBtn.innerHTML = translations[currentLang]['play']; // 언어별 '재생' 텍스트
+                historySlider.value = drawHistory.length; 
+                redrawCanvas(drawHistory.length);
+                updateSliderUI();
+                return;
+            }
+            if(drawHistory.length === 0) return;
+            
+            isReplaying = true; 
+            playBtn.innerHTML = translations[currentLang]['stop']; // 언어별 '정지' 텍스트
+            
+            let frame = 0;
+            const animate = () => {
+                if(!isReplaying || frame >= drawHistory.length) {
+                    isReplaying = false; 
+                    playBtn.innerHTML = translations[currentLang]['play'];
+                    historySlider.value = drawHistory.length; 
+                    redrawCanvas(drawHistory.length);
+                    updateSliderUI();
+                    return;
+                }
+                for(let i=0; i<5 && frame < drawHistory.length; i++) {
+                    const s = drawHistory[frame++];
+                    drawLine(s.start, s.end, s.color, s.width, s.isEraser);
+                }
+                historySlider.value = frame;
+                updateSliderUI();
+                requestAnimationFrame(animate);
+            };
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            requestAnimationFrame(animate);
+        };
+
+        window.addEventListener('storage', (e) => {
+            if (e.key === STORAGE_KEY && e.newValue) {
+                const data = JSON.parse(e.newValue);
+                drawHistory.push(data);
+                updateSliderUI();
+                drawLine(data.start, data.end, data.color, data.width, data.isEraser);
+            } else if (e.key === RESET_KEY) {
+                drawHistory = [];
+                redrawCanvas(0);
+                updateSliderUI();
+            }
+        });
+    </script>
+</body>
+</html>
