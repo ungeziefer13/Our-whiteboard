@@ -17,7 +17,6 @@
         
         body { margin: 0; padding: 0; font-family: 'Pretendard', sans-serif; background-color: #f4f6f8; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
 
-        /* 로그인(방 입력) 오버레이 */
         #loginOverlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(255, 255, 255, 0.98); z-index: 9999;
@@ -40,7 +39,6 @@
         }
         .login-box button:hover { background: #2563eb; }
 
-        /* [광고 영역] 상단 헤더 및 배너 */
         header { 
             background: white; padding: 0 20px; border-bottom: 1px solid #ddd; 
             display: flex; justify-content: space-between; align-items: center; 
@@ -57,11 +55,9 @@
             border-radius: 4px;
         }
 
-        /* 메인 레이아웃 */
         #main-container { flex-grow: 1; position: relative; overflow: hidden; display: flex; }
         #canvas-wrapper { flex-grow: 1; position: relative; background: #fff; cursor: crosshair; }
         
-        /* [광고 및 정보 영역] 우측 사이드바 */
         aside { 
             width: 320px; background: #fff; border-left: 1px solid #e5e7eb; 
             padding: 20px; display: flex; flex-direction: column; gap: 20px; 
@@ -77,14 +73,12 @@
             aside { display: none; } 
         }
 
-        /* 텍스트 스타일 */
         h2 { font-size: 16px; margin: 0 0 10px 0; color: #111; }
         p, li { font-size: 14px; color: #555; line-height: 1.6; margin-bottom: 5px; }
         ul { padding-left: 20px; margin: 0; }
         .footer-link { margin-top: auto; font-size: 12px; color: #999; text-align: center; padding-top: 20px; }
         .footer-link a { color: #666; text-decoration: none; }
 
-        /* 툴바 & UI */
         #toolbar { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); background: white; padding: 8px 16px; border-radius: 50px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); display: flex; gap: 15px; align-items: center; z-index: 10; }
         #timeMachine { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); width: 90%; max-width: 600px; background: rgba(255, 255, 255, 0.95); padding: 10px 20px; border-radius: 12px; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); display: flex; flex-direction: column; gap: 5px; z-index: 10; }
         
@@ -117,7 +111,7 @@
                 <option value="ja">🇯🇵 日本語</option>
             </select>
         </div>
-        <div class="ad-slot-top" data-i18n="ad_top"style="display: none;"></div>
+        <div class="ad-slot-top" data-i18n="ad_top" style="display: none;"></div>
     </header>
 
     <div id="main-container">
@@ -139,7 +133,7 @@
         </div>
 
         <aside>
-            <div class="ad-slot-sidebar" data-i18n="ad_side"style="display: none;"></div>
+            <div class="ad-slot-sidebar" data-i18n="ad_side" style="display: none;"></div>
             
             <article>
                 <h2 data-i18n="guide_title">User Guide</h2>
@@ -163,9 +157,6 @@
     </div>
 
     <script>
-        // =========================================================
-        // 🔥 [설정 완료] Firebase Config 🔥
-        // =========================================================
         const firebaseConfig = {
             apiKey: "AIzaSyCE3h0H-TW4KVQtF9E0_RW6nhCO6ydpHYs",
             authDomain: "lezgoooo.firebaseapp.com",
@@ -175,19 +166,15 @@
             appId: "1:665618240705:web:66f4c95e95dd4e85223040",
             databaseURL: "https://lezgoooo-default-rtdb.firebaseio.com"
         };
-        // =========================================================
 
-        // Firebase 초기화
         let db, roomRef, userRef;
         try {
             firebase.initializeApp(firebaseConfig);
             db = firebase.database();
-            console.log("Firebase initialized");
         } catch(e) {
-            console.error("Firebase Init Error:", e);
+            console.error(e);
         }
 
-        // 전역 변수
         let currentRoom = "";
         let drawHistory = [];
         let isReplaying = false;
@@ -196,15 +183,12 @@
         let isEraserMode = false;
         let currentLang = 'en';
         
-        // 🔥 추가: 쓰로틀링(과부하 방지)용 변수
         let lastSendTime = 0;
         let lastSentX = 0, lastSentY = 0;
-        const SEND_INTERVAL = 30; // 30ms 마다 서버 전송 (트래픽 대폭 감소)
+        const SEND_INTERVAL = 30; 
         
-        // 유저 식별용 랜덤 ID 생성 (세션별 고유)
         const myUserId = 'user_' + Math.random().toString(36).substr(2, 9);
 
-        // DOM 요소
         const canvas = document.getElementById('whiteboard');
         const ctx = canvas.getContext('2d');
         const wrapper = document.getElementById('canvas-wrapper');
@@ -217,7 +201,6 @@
         const penBtn = document.getElementById('penBtn');
         const eraserBtn = document.getElementById('eraserBtn');
 
-        // --- 다국어 (i18n) 설정 ---
         const translations = {
             en: {
                 login_desc: "Enter a Room Code to join.",
@@ -232,7 +215,7 @@
                 feature_1: "<strong>Real-time Sync:</strong> Drawings are synced across all devices via Room Code.",
                 feature_2: "<strong>Time Travel:</strong> Press Play to rewind and watch the drawing process.",
                 feature_3: "<strong>Auto Cleanup:</strong> Data is cleared when the room becomes empty.",
-                privacy: "Privacy Policy"
+                privacy: "Privacy Policy",
                 clear_warning: "Canvas limit reached. The board will be cleared to protect memory!"
             },
             ko: {
@@ -248,7 +231,7 @@
                 feature_1: "<strong>실시간 동기화:</strong> 방 코드만 같으면 PC, 태블릿 어디서든 그림이 공유됩니다.",
                 feature_2: "<strong>타임머신:</strong> 재생 버튼을 눌러 처음부터 그려지는 과정을 확인하세요.",
                 feature_3: "<strong>자동 청소:</strong> 마지막 사람이 나가면 방 데이터는 자동으로 초기화됩니다.",
-                privacy: "개인정보처리방침"
+                privacy: "개인정보처리방침",
                 clear_warning: "캔버스 데이터가 초과되어 기기 보호를 위해 보드가 초기화됩니다!"
             },
             ja: {
@@ -264,7 +247,7 @@
                 feature_1: "<strong>リアルタイム同期:</strong> ルームコードで全てのデバイスと同期します。",
                 feature_2: "<strong>タイムマシン:</strong> 再生ボタンで描画プロセスを振り返れます。",
                 feature_3: "<strong>自動クリーンアップ:</strong> 全員が退出するとデータは削除されます。",
-                privacy: "プライバシーポリシー"
+                privacy: "プライバシーポリシー",
                 clear_warning: "キャンバスの容量制限に達しました。メモリ保護のためボードを初期化します！"
             }
         };
@@ -281,10 +264,9 @@
 
         document.getElementById('langSelector').addEventListener('change', (e) => updateLanguage(e.target.value));
 
-        // --- [핵심] 방 입장 및 데이터 자동 관리 로직 ---
         function joinRoom() {
             const code = roomInput.value.trim();
-            if (!code) return alert("Please enter a room code.");
+            if (!code) return;
             
             currentRoom = code;
             overlay.style.display = 'none';
@@ -293,35 +275,24 @@
             
             resizeCanvas();
 
-            // DB 참조 경로 설정
             roomRef = db.ref('rooms/' + currentRoom);
             const usersRef = roomRef.child('users');
 
-            // 1. 입장 시점: 현재 방에 사람이 있는지 확인 (서버에서 확실히 읽어오도록 .get() 사용)
             usersRef.get().then((snapshot) => {
                 const hasUsers = snapshot.exists() && snapshot.numChildren() > 0;
                 
                 if (!hasUsers) {
-                    // 서버 확인 결과 진짜 사람이 없을 때만 지움
-                    console.log("Empty room detected. Clearing previous data...");
                     roomRef.child('strokes').remove(); 
-                } else {
-                    console.log("Room is active. Loading existing data...");
                 }
 
-                // 2. 나를 '접속 중인 유저' 명단에 등록
                 userRef = usersRef.child(myUserId);
                 userRef.set(true);
                 
-                // 3. 접속 끊기면(탭 닫기, 새로고침) 자동으로 명단에서 삭제
                 userRef.onDisconnect().remove();
 
-                // 4. 그림 데이터 구독 시작
                 subscribeToDrawings();
                 
             }).catch((error) => {
-                console.error("Firebase fetch error:", error);
-                // 혹시 에러가 나더라도 데이터가 날아가는 것을 방지하기 위해 접속은 유지
                 userRef = usersRef.child(myUserId);
                 userRef.set(true);
                 userRef.onDisconnect().remove();
@@ -330,13 +301,11 @@
         }
 
         function subscribeToDrawings() {
-            // 그림 추가 이벤트 리스너
             roomRef.child('strokes').on('child_added', (snapshot) => {
                 const stroke = snapshot.val();
                 drawHistory.push(stroke);
                 
                 if (!isReplaying) {
-                    // 🔥 변경점: 남이 그린 선(sender가 내가 아닌 경우)만 내 화면에 추가로 그림
                     if (stroke.sender !== myUserId) {
                         drawLine(stroke.start, stroke.end, stroke.color, stroke.width, stroke.isEraser);
                     }
@@ -344,15 +313,11 @@
                 }
             });
 
-            // 그림 전체 삭제(자동 청소) 감지
             roomRef.child('strokes').on('child_removed', (snapshot) => {
-                // 개별 삭제는 지원 안 하므로, strokes 자체가 null이 되는 경우를 감지해야 함.
-                // Firebase 특성상 부모 노드를 감시
             });
 
             roomRef.child('strokes').on('value', snapshot => {
                 if(!snapshot.exists()) {
-                    // 데이터가 사라졌다면 캔버스 비우기
                     drawHistory = [];
                     ctx.clearRect(0,0, canvas.width, canvas.height);
                     updateSliderUI();
@@ -360,7 +325,6 @@
             });
         }
 
-        // --- 그리기 로직 ---
         function getPos(e) {
             const rect = canvas.getBoundingClientRect();
             const cx = e.touches ? e.touches[0].clientX : e.clientX;
@@ -373,7 +337,7 @@
             isDrawing = true;
             const pos = getPos(e);
             lastX = pos.x; lastY = pos.y;
-            lastSentX = pos.x; lastSentY = pos.y; // 서버 전송용 시작점 기록
+            lastSentX = pos.x; lastSentY = pos.y; 
         }
 
         function drawProcess(e) {
@@ -384,10 +348,8 @@
             const color = document.getElementById('colorPicker').value;
             const width = document.getElementById('lineWidth').value;
 
-            // 1. 내 화면에는 서버 통신 기다리지 않고 '즉시' 부드럽게 그리기 (딜레이 제로)
             drawLine({x: lastX, y: lastY}, pos, color, width, isEraserMode);
 
-            // 2. 서버에는 30ms 간격으로만 압축해서 전송 (과부하 90% 이상 감소)
             const now = Date.now();
             if (now - lastSendTime > SEND_INTERVAL) {
                 const strokeData = {
@@ -397,7 +359,7 @@
                     width: width,
                     isEraser: isEraserMode,
                     timestamp: firebase.database.ServerValue.TIMESTAMP,
-                    sender: myUserId // 내 그림임을 표시
+                    sender: myUserId 
                 };
                 roomRef.child('strokes').push(strokeData);
                 
@@ -413,7 +375,6 @@
             if (!isDrawing) return;
             isDrawing = false; 
             
-            // 마우스를 뗄 때, 아직 서버로 전송 안 된 미세한 끝부분이 있다면 마저 전송
             if (currentRoom && (lastSentX !== lastX || lastSentY !== lastY)) {
                 const strokeData = {
                     start: {x: lastSentX, y: lastSentY},
@@ -426,12 +387,12 @@
                 };
                 roomRef.child('strokes').push(strokeData);
 
-                // 🔥 변경: 번역 사전에서 현재 언어에 맞는 경고문을 가져옴
                 if (drawHistory.length > 3000) {
                     alert(translations[currentLang].clear_warning);
                     roomRef.child('strokes').remove(); 
                 }
-        }
+            } 
+        } 
 
         function drawLine(start, end, color, width, isEraser) {
             ctx.beginPath();
@@ -453,7 +414,6 @@
             ctx.globalCompositeOperation = 'source-over';
         }
 
-        // 이벤트 리스너
         canvas.addEventListener('mousedown', startDrawing);
         canvas.addEventListener('touchstart', startDrawing, {passive: false});
         window.addEventListener('mousemove', drawProcess);
@@ -462,7 +422,6 @@
         window.addEventListener('touchend', stopDrawing);
         wrapper.addEventListener('mouseleave', stopDrawing);
 
-        // 툴바 버튼
         penBtn.onclick = () => { isEraserMode = false; updateToolUI(penBtn); canvas.style.cursor = 'crosshair'; };
         eraserBtn.onclick = () => { isEraserMode = true; updateToolUI(eraserBtn); canvas.style.cursor = 'default'; };
         
@@ -471,7 +430,6 @@
             activeBtn.classList.add('active');
         }
 
-        // --- 유틸리티 (리사이즈, 타임머신) ---
         function resizeCanvas() {
             canvas.width = wrapper.offsetWidth;
             canvas.height = wrapper.offsetHeight;
@@ -545,9 +503,3 @@
     </script>
 </body>
 </html>
-
-
-
-
-
-
