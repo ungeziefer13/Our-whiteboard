@@ -289,12 +289,12 @@
             roomRef = db.ref('rooms/' + currentRoom);
             const usersRef = roomRef.child('users');
 
-            // 1. 입장 시점: 현재 방에 사람이 있는지 확인 (한 번만 실행)
-            usersRef.once('value', (snapshot) => {
+            // 1. 입장 시점: 현재 방에 사람이 있는지 확인 (서버에서 확실히 읽어오도록 .get() 사용)
+            usersRef.get().then((snapshot) => {
                 const hasUsers = snapshot.exists() && snapshot.numChildren() > 0;
                 
                 if (!hasUsers) {
-                    // 사람이 없으면 '버려진 방' -> 데이터(그림) 삭제 후 시작
+                    // 서버 확인 결과 진짜 사람이 없을 때만 지움
                     console.log("Empty room detected. Clearing previous data...");
                     roomRef.child('strokes').remove(); 
                 } else {
@@ -309,6 +309,14 @@
                 userRef.onDisconnect().remove();
 
                 // 4. 그림 데이터 구독 시작
+                subscribeToDrawings();
+                
+            }).catch((error) => {
+                console.error("Firebase fetch error:", error);
+                // 혹시 에러가 나더라도 데이터가 날아가는 것을 방지하기 위해 접속은 유지
+                userRef = usersRef.child(myUserId);
+                userRef.set(true);
+                userRef.onDisconnect().remove();
                 subscribeToDrawings();
             });
         }
@@ -489,6 +497,7 @@
     </script>
 </body>
 </html>
+
 
 
 
