@@ -233,6 +233,7 @@
                 feature_2: "<strong>Time Travel:</strong> Press Play to rewind and watch the drawing process.",
                 feature_3: "<strong>Auto Cleanup:</strong> Data is cleared when the room becomes empty.",
                 privacy: "Privacy Policy"
+                clear_warning: "Canvas limit reached. The board will be cleared to protect memory!"
             },
             ko: {
                 login_desc: "참여할 방 코드를 입력하세요.",
@@ -248,6 +249,7 @@
                 feature_2: "<strong>타임머신:</strong> 재생 버튼을 눌러 처음부터 그려지는 과정을 확인하세요.",
                 feature_3: "<strong>자동 청소:</strong> 마지막 사람이 나가면 방 데이터는 자동으로 초기화됩니다.",
                 privacy: "개인정보처리방침"
+                clear_warning: "캔버스 데이터가 초과되어 기기 보호를 위해 보드가 초기화됩니다!"
             },
             ja: {
                 login_desc: "参加するルームコードを入力してください。",
@@ -263,6 +265,7 @@
                 feature_2: "<strong>タイムマシン:</strong> 再生ボタンで描画プロセスを振り返れます。",
                 feature_3: "<strong>自動クリーンアップ:</strong> 全員が退出するとデータは削除されます。",
                 privacy: "プライバシーポリシー"
+                clear_warning: "キャンバスの容量制限に達しました。メモリ保護のためボードを初期化します！"
             }
         };
 
@@ -422,7 +425,12 @@
                     sender: myUserId
                 };
                 roomRef.child('strokes').push(strokeData);
-            }
+
+                // 🔥 변경: 번역 사전에서 현재 언어에 맞는 경고문을 가져옴
+                if (drawHistory.length > 3000) {
+                    alert(translations[currentLang].clear_warning);
+                    roomRef.child('strokes').remove(); 
+                }
         }
 
         function drawLine(start, end, color, width, isEraser) {
@@ -537,6 +545,7 @@
     </script>
 </body>
 </html>
+
 
 
 
