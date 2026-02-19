@@ -196,6 +196,11 @@
         let isEraserMode = false;
         let currentLang = 'en';
         
+        // 🔥 추가: 쓰로틀링(과부하 방지)용 변수
+        let lastSendTime = 0;
+        let lastSentX = 0, lastSentY = 0;
+        const SEND_INTERVAL = 30; // 30ms 마다 서버 전송 (트래픽 대폭 감소)
+        
         // 유저 식별용 랜덤 ID 생성 (세션별 고유)
         const myUserId = 'user_' + Math.random().toString(36).substr(2, 9);
 
@@ -328,7 +333,10 @@
                 drawHistory.push(stroke);
                 
                 if (!isReplaying) {
-                    drawLine(stroke.start, stroke.end, stroke.color, stroke.width, stroke.isEraser);
+                    // 🔥 변경점: 남이 그린 선(sender가 내가 아닌 경우)만 내 화면에 추가로 그림
+                    if (stroke.sender !== myUserId) {
+                        drawLine(stroke.start, stroke.end, stroke.color, stroke.width, stroke.isEraser);
+                    }
                     updateSliderUI();
                 }
             });
@@ -362,6 +370,7 @@
             isDrawing = true;
             const pos = getPos(e);
             lastX = pos.x; lastY = pos.y;
+            lastSentX = pos.x; lastSentY = pos.y; // 서버 전송용 시작점 기록
         }
 
         function drawProcess(e) {
@@ -369,21 +378,52 @@
             if(e.target === canvas) e.preventDefault();
             const pos = getPos(e);
             
-            const strokeData = {
-                start: {x: lastX, y: lastY},
-                end: {x: pos.x, y: pos.y},
-                color: document.getElementById('colorPicker').value,
-                width: document.getElementById('lineWidth').value,
-                isEraser: isEraserMode,
-                timestamp: firebase.database.ServerValue.TIMESTAMP
-            };
+            const color = document.getElementById('colorPicker').value;
+            const width = document.getElementById('lineWidth').value;
 
-            // 서버 전송
-            roomRef.child('strokes').push(strokeData);
+            // 1. 내 화면에는 서버 통신 기다리지 않고 '즉시' 부드럽게 그리기 (딜레이 제로)
+            drawLine({x: lastX, y: lastY}, pos, color, width, isEraserMode);
+
+            // 2. 서버에는 30ms 간격으로만 압축해서 전송 (과부하 90% 이상 감소)
+            const now = Date.now();
+            if (now - lastSendTime > SEND_INTERVAL) {
+                const strokeData = {
+                    start: {x: lastSentX, y: lastSentY},
+                    end: {x: pos.x, y: pos.y},
+                    color: color,
+                    width: width,
+                    isEraser: isEraserMode,
+                    timestamp: firebase.database.ServerValue.TIMESTAMP,
+                    sender: myUserId // 내 그림임을 표시
+                };
+                roomRef.child('strokes').push(strokeData);
+                
+                lastSentX = pos.x; 
+                lastSentY = pos.y;
+                lastSendTime = now;
+            }
+
             lastX = pos.x; lastY = pos.y;
         }
 
-        function stopDrawing() { isDrawing = false; }
+        function stopDrawing() { 
+            if (!isDrawing) return;
+            isDrawing = false; 
+            
+            // 마우스를 뗄 때, 아직 서버로 전송 안 된 미세한 끝부분이 있다면 마저 전송
+            if (currentRoom && (lastSentX !== lastX || lastSentY !== lastY)) {
+                const strokeData = {
+                    start: {x: lastSentX, y: lastSentY},
+                    end: {x: lastX, y: lastY},
+                    color: document.getElementById('colorPicker').value,
+                    width: document.getElementById('lineWidth').value,
+                    isEraser: isEraserMode,
+                    timestamp: firebase.database.ServerValue.TIMESTAMP,
+                    sender: myUserId
+                };
+                roomRef.child('strokes').push(strokeData);
+            }
+        }
 
         function drawLine(start, end, color, width, isEraser) {
             ctx.beginPath();
@@ -497,6 +537,7 @@
     </script>
 </body>
 </html>
+
 
 
 
