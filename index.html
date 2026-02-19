@@ -2,15 +2,14 @@
 <html lang="en">
 <head>
     <meta name="google-site-verification" content="LQ9vdR1iNToKL1Gp4PhzHHlNh578ApPndzqx_nH0HXU" />
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7353859744732336"
-     crossorigin="anonymous"></script>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7353859744732336" crossorigin="anonymous"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Free online whiteboard with real-time sync across devices via Room Code. No installation needed.">
     <title>Global TimeWhiteboard</title>
     
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
     <style>
         @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
@@ -187,6 +186,8 @@
         let lastSentX = 0, lastSentY = 0;
         const SEND_INTERVAL = 30; 
         
+        let lastCanvasWidth = 0;
+        
         const myUserId = 'user_' + Math.random().toString(36).substr(2, 9);
 
         const canvas = document.getElementById('whiteboard');
@@ -338,6 +339,22 @@
             const pos = getPos(e);
             lastX = pos.x; lastY = pos.y;
             lastSentX = pos.x; lastSentY = pos.y; 
+
+            const color = document.getElementById('colorPicker').value;
+            const width = document.getElementById('lineWidth').value;
+            const dotEnd = { x: pos.x + 0.1, y: pos.y + 0.1 };
+            
+            drawLine(pos, dotEnd, color, width, isEraserMode);
+            
+            roomRef.child('strokes').push({
+                start: pos,
+                end: dotEnd,
+                color: color,
+                width: width,
+                isEraser: isEraserMode,
+                timestamp: firebase.database.ServerValue.TIMESTAMP,
+                sender: myUserId
+            });
         }
 
         function drawProcess(e) {
@@ -431,6 +448,9 @@
         }
 
         function resizeCanvas() {
+            if (lastCanvasWidth === wrapper.offsetWidth) return;
+            lastCanvasWidth = wrapper.offsetWidth;
+
             canvas.width = wrapper.offsetWidth;
             canvas.height = wrapper.offsetHeight;
             redrawCanvas(historySlider.value);
